@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek 对话导出工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
+    </script>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --text-secondary: #666666;
+            --border: #e0e0e0;
+            --accent: #4f6ef7;
+            --accent-hover: #3b54d4;
+            --danger: #e74c3c;
+            --radius: 10px;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            --transition: 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px 20px 60px;
+        }
+
+        header {
+            text-align: center;
+            padding: 32px 0 20px;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #222;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            margin-top: 6px;
+            font-size: 0.95rem;
+        }
+
+        /* ========== 上传区域 ========== */
+        .upload-zone {
+            background: var(--card-bg);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+            position: relative;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            border-color: var(--accent);
+            background: #f8faff;
+            box-shadow: 0 4px 20px rgba(79, 110, 247, 0.12);
+        }
+
+        .upload-zone .icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .upload-zone .title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #444;
+        }
+
+        .upload-zone .hint {
+            color: #999;
+            font-size: 0.85rem;
+            margin-top: 6px;
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-zone.file-loaded {
+            border-color: #27ae60;
+            border-style: solid;
+            background: #f0fdf4;
+        }
+
+        /* ========== 筛选区 ========== */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: flex-end;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+        }
+
+        .filter-group input[type="date"] {
+            padding: 8px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            color: var(--text);
+            background: #fafafa;
+            transition: border-color var(--transition);
+            min-width: 150px;
+        }
+
+        .filter-group input[type="date"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: #fff;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            transition: all var(--transition);
+            background: #fafafa;
+        }
+
+        .filter-option:hover {
+            border-color: var(--accent);
+            background: #f8faff;
+        }
+
+        .filter-option input[type="checkbox"] {
+            width: 17px;
+            height: 17px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        /* ========== 列表区 ========== */
+        .list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .list-header h2 {
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+
+        .list-header .count {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            padding: 9px 18px;
+            border-radius: 7px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            font-family: inherit;
+            cursor: pointer;
+            border: none;
+            transition: all var(--transition);
+            letter-spacing: 0.01em;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 14px rgba(79, 110, 247, 0.3);
+        }
+
+        .btn-outline {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-sm {
+            padding: 5px 12px;
+            font-size: 0.8rem;
+            border-radius: 5px;
+        }
+
+        .table-wrapper {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        thead {
+            background: #fafbfc;
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+
+        th:first-child {
+            width: 44px;
+            text-align: center;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+        }
+
+        td:first-child {
+            text-align: center;
+        }
+
+        tbody tr {
+            transition: background var(--transition);
+        }
+
+        tbody tr:hover {
+            background: #fafcff;
+        }
+
+        tbody tr.hidden-row {
+            display: none;
+        }
+
+        td.title-cell {
+            font-weight: 500;
+            color: #222;
+        }
+
+        td.time-cell {
+            color: var(--text-secondary);
+            white-space: nowrap;
+            font-size: 0.85rem;
+        }
+
+        input[type="checkbox"].row-checkbox {
+            width: 17px;
+            height: 17px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        #selectAllCheckbox {
+            width: 17px;
+            height: 17px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 48px 20px;
+            color: #aaa;
+            font-size: 1rem;
+        }
+
+        .no-data .emoji {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        /* ========== 导出按钮区 ========== */
+        .export-bar {
+            text-align: center;
+            padding: 8px 0;
+        }
+
+        .btn-large {
+            padding: 14px 36px;
+            font-size: 1.05rem;
+            border-radius: 8px;
+        }
+
+        /* ========== Toast ========== */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: #27ae60;
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 768px) {
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group input[type="date"] {
+                min-width: auto;
+            }
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            th,
+            td {
+                padding: 10px 8px;
+            }
+
+            .btn-large {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>📋 DeepSeek 对话导出工具</h1>
+            <p>将导出的 JSON 转换为可读的 HTML 文件</p>
+        </header>
+
+        <!-- 上传区域 -->
+        <div class="upload-zone" id="uploadZone">
+            <span class="icon">📁</span>
+            <div class="title">点击上传或拖拽 JSON 文件到此处</div>
+            <div class="hint">支持 DeepSeek 导出的 conversations.json 格式</div>
+            <input type="file" id="fileInput" accept=".json">
+        </div>
+
+        <!-- 筛选区 -->
+        <div class="filter-bar" id="filterBar" style="display:none;">
+            <div class="filter-group">
+                <label for="dateStart">📅 起始日期</label>
+                <input type="date" id="dateStart">
+            </div>
+            <div class="filter-group">
+                <label for="dateEnd">📅 结束日期</label>
+                <input type="date" id="dateEnd">
+            </div>
+            <label class="filter-option" id="thinkOption">
+                <input type="checkbox" id="includeThink" checked>
+                <span>🧠 包含深度思考内容</span>
+            </label>
+            <button class="btn btn-outline btn-sm" id="applyFilterBtn">应用筛选</button>
+        </div>
+
+        <!-- 列表 -->
+        <div id="listSection" style="display:none;">
+            <div class="list-header">
+                <div>
+                    <h2>对话列表</h2>
+                    <span class="count" id="conversationCount"></span>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-outline btn-sm" id="selectAllBtn">全选</button>
+                    <button class="btn btn-outline btn-sm" id="deselectAllBtn">取消全选</button>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAllCheckbox" title="全选/取消全选"></th>
+                            <th>对话标题</th>
+                            <th>创建时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+                <div class="no-data" id="noDataMsg" style="display:none;">
+                    <span class="emoji">📭</span>
+                    <span>没有匹配的对话</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导出 -->
+        <div class="export-bar" id="exportBar" style="display:none;">
+            <button class="btn btn-primary btn-large" id="exportBtn">📥 一键导出 HTML</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function () {
+            // ==================== DOM 引用 ====================
+            const uploadZone = document.getElementById('uploadZone');
+            const fileInput = document.getElementById('fileInput');
+            const filterBar = document.getElementById('filterBar');
+            const listSection = document.getElementById('listSection');
+            const exportBar = document.getElementById('exportBar');
+            const tableBody = document.getElementById('tableBody');
+            const noDataMsg = document.getElementById('noDataMsg');
+            const dateStart = document.getElementById('dateStart');
+            const dateEnd = document.getElementById('dateEnd');
+            const includeThink = document.getElementById('includeThink');
+            const applyFilterBtn = document.getElementById('applyFilterBtn');
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            const deselectAllBtn = document.getElementById('deselectAllBtn');
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            const exportBtn = document.getElementById('exportBtn');
+            const conversationCount = document.getElementById('conversationCount');
+            const toast = document.getElementById('toast');
+
+            // ==================== 全局状态 ====================
+            let allConversations = []; // 解析后的所有对话
+            let conversationMeta = []; // { id, title, insertedAt, index }
+
+            // ==================== Toast ====================
+            let toastTimer;
+
+            function showToast(msg, type = '') {
+                clearTimeout(toastTimer);
+                toast.textContent = msg;
+                toast.className = 'toast ' + type + ' show';
+                toastTimer = setTimeout(() => {
+                    toast.className = 'toast';
+                }, 2500);
+            }
+
+            // ==================== 工具函数 ====================
+            function escapeHtml(text) {
+                if (typeof text !== 'string') return '';
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+
+            function parseDate(dateStr) {
+                if (!dateStr) return null;
+                try {
+                    const d = new Date(dateStr);
+                    if (isNaN(d.getTime())) return null;
+                    return d;
+                } catch {
+                    return null;
+                }
+            }
+
+            function formatDate(dateStr) {
+                const d = parseDate(dateStr);
+                if (!d) return dateStr || '';
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const hh = String(d.getHours()).padStart(2, '0');
+                const min = String(d.getMinutes()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+            }
+
+            function toDateOnly(dateStr) {
+                const d = parseDate(dateStr);
+                if (!d) return '';
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            }
+
+            // ==================== 消息遍历 ====================
+            function collectMessages(mapping) {
+                const messages = [];
+                const visited = new Set();
+                // 收集所有非 root、message 不为 null 的节点
+                for (const [nodeId, node] of Object.entries(mapping)) {
+                    if (nodeId === 'root') continue;
+                    if (!node.message) continue;
+                    if (visited.has(nodeId)) continue;
+                    visited.add(nodeId);
+                    messages.push({
+                        nodeId,
+                        parent: node.parent,
+                        children: node.children || [],
+                        message: node.message,
+                        insertedAt: node.message.inserted_at || '',
+                    });
+                }
+                // 按 inserted_at 排序
+                messages.sort((a, b) => {
+                    const da = parseDate(a.insertedAt);
+                    const db = parseDate(b.insertedAt);
+                    if (da && db) return da - db;
+                    if (da) return -1;
+                    if (db) return 1;
+                    return 0;
+                });
+                return messages;
+            }
+
+            // ==================== Markdown 渲染 ====================
+            function renderMarkdown(text, isThinkContent = false) {
+                if (!text || typeof text !== 'string') return '';
+
+                // 对于深度思考内容，先进行HTML转义以防止破坏页面结构
+                let processedText = text;
+                if (isThinkContent) {
+                    processedText = escapeHtml(text);
+                    // 将转义后的文本包装在 <pre> 中以保持格式
+                    return '<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: monospace; font-size: 0.88rem; line-height: 1.65; color: #555;">' + processedText + '</pre>';
+                }
+
+                try {
+                    if (typeof marked !== 'undefined' && marked.parse) {
+                        const html = marked.parse(text);
+                        return typeof html === 'string' ? html : String(html);
+                    }
+                } catch (e) {
+                    console.warn('Markdown 渲染失败，使用纯文本:', e);
+                }
+                return '<pre>' + escapeHtml(text) + '</pre>';
+            }
+
+            // ==================== 文件处理 ====================
+            function handleFile(file) {
+                if (!file) return;
+                if (!file.name.toLowerCase().endsWith('.json')) {
+                    showToast('请上传 .json 格式的文件', 'error');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (!Array.isArray(data)) {
+                            showToast('JSON 格式不正确：期望一个数组', 'error');
+                            return;
+                        }
+                        if (data.length === 0) {
+                            showToast('JSON 文件中没有对话数据', 'error');
+                            return;
+                        }
+                        allConversations = data;
+                        buildConversationMeta();
+                        setupDateRange();
+                        renderTable();
+                        filterBar.style.display = 'flex';
+                        listSection.style.display = 'block';
+                        exportBar.style.display = 'block';
+                        uploadZone.classList.add('file-loaded');
+                        showToast(`成功加载 ${data.length} 个对话`, 'success');
+                    } catch (err) {
+                        showToast('JSON 解析失败：' + err.message, 'error');
+                        console.error(err);
+                    }
+                };
+                reader.onerror = function () {
+                    showToast('文件读取失败', 'error');
+                };
+                reader.readAsText(file);
+            }
+
+            function buildConversationMeta() {
+                conversationMeta = allConversations.map((conv, index) => ({
+                    id: conv.id || `conv_${index}`,
+                    title: conv.title || '未命名对话',
+                    insertedAt: conv.inserted_at || conv.updated_at || '',
+                    index,
+                }));
+            }
+
+            function setupDateRange() {
+                const dates = conversationMeta
+                    .map(m => parseDate(m.insertedAt))
+                    .filter(d => d !== null);
+                if (dates.length === 0) return;
+                const minDate = new Date(Math.min(...dates));
+                const maxDate = new Date(Math.max(...dates));
+                dateStart.value = toDateOnly(minDate.toISOString());
+                dateEnd.value = toDateOnly(maxDate.toISOString());
+            }
+
+            // ==================== 表格渲染 ====================
+            function renderTable(filterStart, filterEnd) {
+                const startDate = filterStart ? new Date(filterStart + 'T00:00:00') : null;
+                const endDate = filterEnd ? new Date(filterEnd + 'T23:59:59') : null;
+
+                let visibleCount = 0;
+                let allChecked = true;
+                let anyVisible = false;
+
+                tableBody.innerHTML = '';
+
+                conversationMeta.forEach((meta, idx) => {
+                    const d = parseDate(meta.insertedAt);
+                    let visible = true;
+                    if (startDate && d && d < startDate) visible = false;
+                    if (endDate && d && d > endDate) visible = false;
+                    if (startDate && !d) visible = false;
+
+                    if (visible) {
+                        visibleCount++;
+                        anyVisible = true;
+                    }
+
+                    const tr = document.createElement('tr');
+                    if (!visible) tr.classList.add('hidden-row');
+                    tr.dataset.index = idx;
+                    tr.dataset.visible = visible ? '1' : '0';
+
+                    // 复选框
+                    const tdCheck = document.createElement('td');
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.classList.add('row-checkbox');
+                    cb.checked = visible;
+                    cb.dataset.index = idx;
+                    cb.addEventListener('change', updateSelectAllCheckbox);
+                    tdCheck.appendChild(cb);
+
+                    // 标题
+                    const tdTitle = document.createElement('td');
+                    tdTitle.classList.add('title-cell');
+                    tdTitle.textContent = meta.title;
+
+                    // 时间
+                    const tdTime = document.createElement('td');
+                    tdTime.classList.add('time-cell');
+                    tdTime.textContent = formatDate(meta.insertedAt);
+
+                    tr.appendChild(tdCheck);
+                    tr.appendChild(tdTitle);
+                    tr.appendChild(tdTime);
+                    tableBody.appendChild(tr);
+
+                    if (visible && !cb.checked) allChecked = false;
+                });
+
+                selectAllCheckbox.checked = anyVisible && allChecked;
+                conversationCount.textContent = `共 ${visibleCount} 个对话`;
+                noDataMsg.style.display = anyVisible ? 'none' : 'block';
+            }
+
+            function applyFilter() {
+                const startVal = dateStart.value;
+                const endVal = dateEnd.value;
+                renderTable(startVal || null, endVal || null);
+            }
+
+            function updateSelectAllCheckbox() {
+                const visibleRows = tableBody.querySelectorAll('tr[data-visible="1"]');
+                const checkboxes = tableBody.querySelectorAll('.row-checkbox');
+                let allChecked = true;
+                let anyVisible = false;
+                visibleRows.forEach(tr => {
+                    anyVisible = true;
+                    const cb = tr.querySelector('.row-checkbox');
+                    if (cb && !cb.checked) allChecked = false;
+                });
+                selectAllCheckbox.checked = anyVisible && allChecked;
+            }
+
+            function setAllCheckboxes(checked) {
+                const visibleRows = tableBody.querySelectorAll('tr[data-visible="1"]');
+                visibleRows.forEach(tr => {
+                    const cb = tr.querySelector('.row-checkbox');
+                    if (cb) cb.checked = checked;
+                });
+                selectAllCheckbox.checked = checked && visibleRows.length > 0;
+            }
+
+            // ==================== 导出 HTML ====================
+            function generateExportHTML(selectedIndices) {
+                const includeThinkContent = includeThink.checked;
+                const now = new Date();
+                const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+                let bodyHTML = '';
+                let tocHTML = '<div class="toc"><h2>📑 目录</h2><ol>';
+
+                selectedIndices.forEach((meta, orderIdx) => {
+                    const conv = allConversations[meta.index];
+                    if (!conv || !conv.mapping) return;
+
+                    const convTitle = escapeHtml(meta.title);
+                    const anchorId = 'conv-' + (orderIdx + 1);
+                    tocHTML +=
+                        `<li><a href="#${anchorId}">${convTitle}</a> <span class="toc-time">${formatDate(meta.insertedAt)}</span></li>`;
+
+                    bodyHTML += `<section class="conversation" id="${anchorId}">\n`;
+                    bodyHTML +=
+                        `<h1 class="conv-title">${convTitle}</h1>\n`;
+                    bodyHTML +=
+                        `<div class="conv-meta">🕐 ${formatDate(meta.insertedAt)} · ID: ${escapeHtml(conv.id || 'N/A')}</div>\n`;
+
+                    const messages = collectMessages(conv.mapping);
+
+                    messages.forEach(msg => {
+                        const fragments = msg.message.fragments || [];
+                        let hasThink = false;
+                        let hasResponse = false;
+                        let userContent = '';
+                        let thinkContent = '';
+                        let responseContent = '';
+
+                        fragments.forEach(frag => {
+                            if (frag.type === 'REQUEST') {
+                                userContent += frag.content;
+                            } else if (frag.type === 'THINK') {
+                                hasThink = true;
+                                thinkContent += frag.content;
+                            } else if (frag.type === 'RESPONSE') {
+                                hasResponse = true;
+                                responseContent += frag.content;
+                            }
+                        });
+
+                        // 用户输入
+                        if (userContent.trim()) {
+                            bodyHTML +=
+                                `<div class="msg msg-user">\n<div class="msg-label">🧑 用户</div>\n<pre class="user-input">${escapeHtml(userContent.trim())}</pre>\n</div>\n`;
+                        }
+
+                        // 深度思考
+                        if (hasThink && includeThinkContent && thinkContent.trim()) {
+                            bodyHTML +=
+                                `<details class="think-block">\n<summary>🧠 深度思考过程</summary>\n<div class="think-content">${renderMarkdown(thinkContent.trim(), true)}</div>\n</details>\n`;
+                        }
+
+                        // AI 回答
+                        if (hasResponse && responseContent.trim()) {
+                            bodyHTML +=
+                                `<div class="msg msg-assistant">\n<div class="msg-label">🤖 DeepSeek</div>\n<div class="assistant-message">${renderMarkdown(responseContent.trim())}</div>\n</div>\n`;
+                        }
+                    });
+
+                    bodyHTML += `</section>\n`;
+                });
+
+                tocHTML += '</ol></div>\n';
+
+                const fullHTML = `<!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DeepSeek 对话记录 - ${dateStr}</title>
+        <style>
+            :root {
+                --bg: #f9fafb;
+                --card-bg: #ffffff;
+                --text: #222222;
+                --text-secondary: #555555;
+                --border: #e2e6ed;
+                --user-bg: #f0f4ff;
+                --assistant-bg: #ffffff;
+                --think-bg: #fffdf5;
+                --think-border: #e8dba0;
+                --accent: #4f6ef7;
+                --radius: 10px;
+                --shadow: 0 2px 10px rgba(0,0,0,0.06);
+            }
+            * { margin:0; padding:0; box-sizing:border-box; }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                line-height: 1.7;
+                padding: 24px 16px 60px;
+                max-width: 900px;
+                margin: 0 auto;
+            }
+            .toc {
+                background: var(--card-bg);
+                border-radius: var(--radius);
+                padding: 20px 28px;
+                margin-bottom: 32px;
+                box-shadow: var(--shadow);
+            }
+            .toc h2 { font-size:1.2rem; margin-bottom:12px; color:#333; }
+            .toc ol { padding-left:22px; }
+            .toc li { margin:6px 0; font-size:0.95rem; }
+            .toc li a { color: var(--accent); text-decoration:none; }
+            .toc li a:hover { text-decoration:underline; }
+            .toc-time { color:#999; font-size:0.8rem; margin-left:8px; }
+            .conversation {
+                background: var(--card-bg);
+                border-radius: var(--radius);
+                padding: 28px 32px;
+                margin-bottom: 28px;
+                box-shadow: var(--shadow);
+            }
+            .conv-title {
+                font-size: 1.35rem;
+                font-weight: 700;
+                color: #1a1a1a;
+                margin-bottom: 6px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #eee;
+            }
+            .conv-meta {
+                font-size: 0.85rem;
+                color: #999;
+                margin-bottom: 20px;
+            }
+            .msg {
+                margin-bottom: 18px;
+                padding: 16px 20px;
+                border-radius: var(--radius);
+            }
+            .msg-label {
+                font-weight: 700;
+                font-size: 0.9rem;
+                margin-bottom: 8px;
+                color: #555;
+            }
+            .msg-user {
+                background: var(--user-bg);
+                border-left: 3px solid var(--accent);
+            }
+            .msg-assistant {
+                background: var(--assistant-bg);
+                border-left: 3px solid #27ae60;
+            }
+            .user-input {
+                font-family: 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+                font-size: 0.88rem;
+                line-height: 1.5;
+                white-space: pre-wrap;
+                word-break: break-word;
+                overflow-wrap: break-word;
+                background: rgba(0,0,0,0.03);
+                padding: 10px 14px;
+                border-radius: 6px;
+                color: #333;
+                margin: 0;
+            }
+            .assistant-message {
+                font-size: 0.95rem;
+                line-height: 1.75;
+                color: #333;
+            }
+            /* 缩小 AI 回答中的 h1 字号 */
+            .assistant-message h1 {
+                font-size: 1.25rem;
+                font-weight: 700;
+                margin: 0.8em 0 0.4em;
+                color: #222;
+            }
+            .assistant-message h2 {
+                font-size: 1.15rem;
+                font-weight: 700;
+                margin: 0.7em 0 0.35em;
+                color: #333;
+            }
+            .assistant-message h3 {
+                font-size: 1.05rem;
+                font-weight: 600;
+                margin: 0.6em 0 0.3em;
+            }
+            .assistant-message h4, .assistant-message h5, .assistant-message h6 {
+                font-size: 0.95rem;
+                font-weight: 600;
+                margin: 0.5em 0 0.25em;
+            }
+            .assistant-message p { margin: 0.5em 0; }
+            .assistant-message ul, .assistant-message ol { padding-left: 24px; margin: 0.5em 0; }
+            .assistant-message li { margin: 0.25em 0; }
+            .assistant-message code {
+                background: #f0f0f0;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+                font-size: 0.85em;
+                color: #c7254e;
+            }
+            .assistant-message pre {
+                background: #282c34;
+                color: #abb2bf;
+                padding: 16px 18px;
+                border-radius: 8px;
+                overflow-x: auto;
+                margin: 0.7em 0;
+                font-size: 0.85rem;
+                line-height: 1.5;
+            }
+            .assistant-message pre code {
+                background: transparent;
+                color: inherit;
+                padding: 0;
+                font-size: inherit;
+            }
+            .assistant-message blockquote {
+                border-left: 4px solid #ddd;
+                padding: 8px 16px;
+                margin: 0.6em 0;
+                color: #666;
+                background: #fafafa;
+                border-radius: 0 6px 6px 0;
+            }
+            .assistant-message table {
+                border-collapse: collapse;
+                width: 100%;
+                margin: 0.6em 0;
+                font-size: 0.9rem;
+            }
+            .assistant-message th, .assistant-message td {
+                border: 1px solid #ddd;
+                padding: 8px 12px;
+                text-align: left;
+            }
+            .assistant-message th {
+                background: #f5f6f8;
+                font-weight: 600;
+            }
+            .assistant-message a {
+                color: var(--accent);
+            }
+            .assistant-message hr {
+                border: none;
+                border-top: 1px solid #ddd;
+                margin: 1em 0;
+            }
+            .think-block {
+                background: var(--think-bg);
+                border: 1px solid var(--think-border);
+                border-radius: 8px;
+                margin: 12px 0 18px;
+                padding: 12px 16px;
+                font-size: 0.9rem;
+            }
+            .think-block summary {
+                cursor: pointer;
+                font-weight: 600;
+                color: #8a7a30;
+                user-select: none;
+            }
+            .think-content {
+                margin-top: 10px;
+                color: #555;
+                line-height: 1.65;
+                font-size: 0.88rem;
+            }
+            .think-content h1 { font-size:1.2rem; }
+            .think-content h2 { font-size:1.1rem; }
+            .think-content h3 { font-size:1rem; }
+            .think-content pre {
+                background: #f5f0d5;
+                color: #555;
+                padding: 10px 14px;
+                border-radius: 6px;
+                overflow-x: auto;
+                font-size: 0.83rem;
+            }
+            .think-content code {
+                background: rgba(0,0,0,0.06);
+                padding: 1px 5px;
+                border-radius: 3px;
+                font-family: monospace;
+            }
+            @media (max-width: 768px) {
+                body { padding: 12px 8px 40px; }
+                .conversation { padding: 18px 14px; }
+                .conv-title { font-size: 1.15rem; }
+            }
+        </style>
+        </head>
+        <body>
+        <h1 style="text-align:center;font-size:1.6rem;margin-bottom:8px;color:#222;">📋 DeepSeek 对话记录</h1>
+        <p style="text-align:center;color:#888;margin-bottom:28px;font-size:0.9rem;">导出时间：${dateStr} · 共 ${selectedIndices.length} 个对话</p>
+        ${tocHTML}
+        ${bodyHTML}
+        </body>
+        </` + `html>`;
+
+                return fullHTML;
+            }
+
+            function doExport() {
+                const checkboxes = tableBody.querySelectorAll('.row-checkbox');
+                const selectedIndices = [];
+                checkboxes.forEach(cb => {
+                    if (cb.checked) {
+                        const idx = parseInt(cb.dataset.index);
+                        if (!isNaN(idx) && idx >= 0 && idx < conversationMeta.length) {
+                            selectedIndices.push(conversationMeta[idx]);
+                        }
+                    }
+                });
+
+                if (selectedIndices.length === 0) {
+                    showToast('请至少选择一个对话', 'error');
+                    return;
+                }
+
+                try {
+                    const html = generateExportHTML(selectedIndices);
+                    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const now = new Date();
+                    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    a.href = url;
+                    a.download = `deepseek-conversations-${dateStr}.html`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast(`成功导出 ${selectedIndices.length} 个对话`, 'success');
+                } catch (err) {
+                    showToast('导出失败：' + err.message, 'error');
+                    console.error(err);
+                }
+            }
+
+            // ==================== 事件监听 ====================
+            // 文件上传
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) handleFile(file);
+            });
+
+            // 拖拽上传
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('drag-over');
+            });
+            uploadZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('drag-over');
+            });
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('drag-over');
+                const file = e.dataTransfer.files[0];
+                if (file) handleFile(file);
+            });
+            uploadZone.addEventListener('click', (e) => {
+                if (e.target !== fileInput) {
+                    fileInput.click();
+                }
+            });
+
+            // 筛选
+            applyFilterBtn.addEventListener('click', applyFilter);
+            dateStart.addEventListener('change', applyFilter);
+            dateEnd.addEventListener('change', applyFilter);
+
+            // 全选/取消
+            selectAllBtn.addEventListener('click', () => setAllCheckboxes(true));
+            deselectAllBtn.addEventListener('click', () => setAllCheckboxes(false));
+            selectAllCheckbox.addEventListener('change', function () {
+                setAllCheckboxes(this.checked);
+            });
+
+            // 导出
+            exportBtn.addEventListener('click', doExport);
+
+            // 表格复选框变化时更新全选状态
+            tableBody.addEventListener('change', function (e) {
+                if (e.target.classList.contains('row-checkbox')) {
+                    updateSelectAllCheckbox();
+                }
+            });
+
+            // ==================== 初始状态 ====================
+            filterBar.style.display = 'none';
+            listSection.style.display = 'none';
+            exportBar.style.display = 'none';
+
+            console.log('✅ DeepSeek 对话导出工具已就绪');
+            console.log('   - 支持拖拽或点击上传 JSON 文件');
+            console.log('   - 支持日期范围筛选');
+            console.log('   - 支持选择是否包含深度思考内容');
+            console.log('   - AI 回答中的 h1 字号已通过 CSS 缩小');
+            console.log('   - 用户输入通过 escapeHtml + <pre> 安全包裹');
+        })();
+    </script>
+</body>
+
+</html>
