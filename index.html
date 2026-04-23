@@ -966,7 +966,10 @@
                 font-weight: 600;
                 margin: 0.5em 0 0.25em;
             }
-            .assistant-message p { margin: 0.5em 0; }
+            .assistant-message p {
+                overflow-x: auto;
+                max-width: 100%;
+            }
             .assistant-message ul, .assistant-message ol { padding-left: 24px; margin: 0.5em 0; }
             .assistant-message li { margin: 0.25em 0; }
             .assistant-message code {
@@ -1023,6 +1026,19 @@
                 border: none;
                 border-top: 1px solid #ddd;
                 margin: 1em 0;
+            }
+            /* 防止图片越界 */
+            .assistant-message img {
+                max-width: 100%;
+                height: auto;
+                display: block;
+                margin: 0.6em 0;
+                border-radius: 6px;
+            }
+            /* 处理ASCII表格和长文本溢出 */
+            .assistant-message p {
+                overflow-x: auto;
+                max-width: 100%;
             }
             .think-block {
                 background: var(--think-bg);
