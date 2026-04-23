@@ -116,7 +116,7 @@
         .filter-bar {
             display: flex;
             flex-wrap: wrap;
-            gap: 16px;
+            gap: 12px;
             align-items: flex-end;
             background: var(--card-bg);
             border-radius: var(--radius);
@@ -128,32 +128,34 @@
         .filter-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
         }
 
         .filter-group label {
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             color: var(--text-secondary);
             letter-spacing: 0.02em;
         }
 
         .filter-group input[type="date"] {
-            padding: 8px 12px;
+            padding: 9px 12px;
             border: 1.5px solid var(--border);
             border-radius: 6px;
             font-size: 0.9rem;
             font-family: inherit;
             color: var(--text);
             background: #fafafa;
-            transition: border-color var(--transition);
-            min-width: 150px;
+            transition: all var(--transition);
+            min-width: 160px;
+            height: 40px;
         }
 
         .filter-group input[type="date"]:focus {
             outline: none;
             border-color: var(--accent);
             background: #fff;
+            box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.1);
         }
 
         .filter-option {
@@ -164,11 +166,13 @@
             user-select: none;
             font-size: 0.9rem;
             font-weight: 500;
-            padding: 8px 14px;
+            padding: 9px 16px;
             border-radius: 6px;
             border: 1.5px solid var(--border);
             transition: all var(--transition);
             background: #fafafa;
+            height: 40px;
+            white-space: nowrap;
         }
 
         .filter-option:hover {
@@ -181,6 +185,34 @@
             height: 17px;
             accent-color: var(--accent);
             cursor: pointer;
+            margin: 0;
+        }
+
+        .btn-export {
+            padding: 9px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            font-family: inherit;
+            cursor: pointer;
+            border: 1.5px solid var(--accent);
+            background: var(--accent);
+            color: #fff;
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 160px;
+            justify-content: center;
+            height: 40px;
+            margin-left: auto;
+        }
+
+        .btn-export:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+            box-shadow: 0 4px 14px rgba(79, 110, 247, 0.3);
+            transform: translateY(-1px);
         }
 
         /* ========== 列表区 ========== */
@@ -435,7 +467,7 @@
                 <input type="checkbox" id="includeThink" checked>
                 <span>🧠 包含深度思考内容</span>
             </label>
-            <button class="btn btn-outline btn-sm" id="applyFilterBtn">应用筛选</button>
+            <button class="btn-export" id="exportBtn">📥 一键导出 HTML</button>
         </div>
 
         <!-- 列表 -->
@@ -444,10 +476,6 @@
                 <div>
                     <h2>对话列表</h2>
                     <span class="count" id="conversationCount"></span>
-                </div>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <button class="btn btn-outline btn-sm" id="selectAllBtn">全选</button>
-                    <button class="btn btn-outline btn-sm" id="deselectAllBtn">取消全选</button>
                 </div>
             </div>
             <div class="table-wrapper">
@@ -484,15 +512,11 @@
             const fileInput = document.getElementById('fileInput');
             const filterBar = document.getElementById('filterBar');
             const listSection = document.getElementById('listSection');
-            const exportBar = document.getElementById('exportBar');
             const tableBody = document.getElementById('tableBody');
             const noDataMsg = document.getElementById('noDataMsg');
             const dateStart = document.getElementById('dateStart');
             const dateEnd = document.getElementById('dateEnd');
             const includeThink = document.getElementById('includeThink');
-            const applyFilterBtn = document.getElementById('applyFilterBtn');
-            const selectAllBtn = document.getElementById('selectAllBtn');
-            const deselectAllBtn = document.getElementById('deselectAllBtn');
             const selectAllCheckbox = document.getElementById('selectAllCheckbox');
             const exportBtn = document.getElementById('exportBtn');
             const conversationCount = document.getElementById('conversationCount');
@@ -636,7 +660,6 @@
                         renderTable();
                         filterBar.style.display = 'flex';
                         listSection.style.display = 'block';
-                        exportBar.style.display = 'block';
                         uploadZone.classList.add('file-loaded');
                         showToast(`成功加载 ${data.length} 个对话`, 'success');
                     } catch (err) {
@@ -739,7 +762,6 @@
 
             function updateSelectAllCheckbox() {
                 const visibleRows = tableBody.querySelectorAll('tr[data-visible="1"]');
-                const checkboxes = tableBody.querySelectorAll('.row-checkbox');
                 let allChecked = true;
                 let anyVisible = false;
                 visibleRows.forEach(tr => {
@@ -748,15 +770,6 @@
                     if (cb && !cb.checked) allChecked = false;
                 });
                 selectAllCheckbox.checked = anyVisible && allChecked;
-            }
-
-            function setAllCheckboxes(checked) {
-                const visibleRows = tableBody.querySelectorAll('tr[data-visible="1"]');
-                visibleRows.forEach(tr => {
-                    const cb = tr.querySelector('.row-checkbox');
-                    if (cb) cb.checked = checked;
-                });
-                selectAllCheckbox.checked = checked && visibleRows.length > 0;
             }
 
             // ==================== 导出 HTML ====================
@@ -1132,15 +1145,16 @@
             });
 
             // 筛选
-            applyFilterBtn.addEventListener('click', applyFilter);
             dateStart.addEventListener('change', applyFilter);
             dateEnd.addEventListener('change', applyFilter);
 
             // 全选/取消
-            selectAllBtn.addEventListener('click', () => setAllCheckboxes(true));
-            deselectAllBtn.addEventListener('click', () => setAllCheckboxes(false));
             selectAllCheckbox.addEventListener('change', function () {
-                setAllCheckboxes(this.checked);
+                const visibleRows = tableBody.querySelectorAll('tr[data-visible="1"]');
+                visibleRows.forEach(tr => {
+                    const cb = tr.querySelector('.row-checkbox');
+                    if (cb) cb.checked = this.checked;
+                });
             });
 
             // 导出
@@ -1156,12 +1170,12 @@
             // ==================== 初始状态 ====================
             filterBar.style.display = 'none';
             listSection.style.display = 'none';
-            exportBar.style.display = 'none';
 
             console.log('✅ DeepSeek 对话导出工具已就绪');
             console.log('   - 支持拖拽或点击上传 JSON 文件');
             console.log('   - 支持日期范围筛选');
             console.log('   - 支持选择是否包含深度思考内容');
+            console.log('   - 导出按钮位于筛选区，与"包含深度思考内容"视觉一致');
             console.log('   - AI 回答中的 h1 字号已通过 CSS 缩小');
             console.log('   - 用户输入通过 escapeHtml + <pre> 安全包裹');
         })();
